@@ -34,13 +34,15 @@ The application bypasses unstable layout blocks, masks trailer/promotional noise
    python app.py
    ```
 
-📦 Bundling as Standalone Executive File (.exe)
+📦 Bundling as Standalone Executive File (.exe) 
+
 To lock structural layout values and bundle the application into a distribution executable while clearing compiler lock-hooks, execute:
 ```bash
 rmdir /s /q build dist && pyinstaller --clean --noconsole --onefile app.py
 ```
 
 🔧 User Configurations
+
 Modify global parameters directly at the top of the script code layout to change stream filters:
 ```bash
 # Video formats scanned from top-left downward priority
@@ -48,5 +50,6 @@ VIDEO_PRIORITIES = ["true web-dl", "nf web-dl", "web-dl", "uhd", "bluray", "hd"]
 AUDIO_PRIORITIES = ["atmos", "ddp5.1", "dd+5.1", "dd5.1", "aac"]
 ```
 
-⚖️ License
+⚖️ License  
+
 This utility is developed solely for educational research and pipeline automation testing.
