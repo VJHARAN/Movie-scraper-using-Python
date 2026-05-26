@@ -9,9 +9,11 @@ import customtkinter as ctk
 from playwright.sync_api import sync_playwright
 from qbittorrentapi import Client
 
+# --- OPTIMIZED QUALITY MATRICES ---
 VIDEO_PRIORITIES = ["true web-dl", "nf web-dl", "web-dl", "uhd", "bluray", "hd", "webrip", "hdrip", "rips"]
 AUDIO_PRIORITIES = ["atmos", "ddp5.1", "dd+5.1", "dd5.1", "aac"]
 
+# --- STAGE-ONE FILTER BLACKLIST ---
 THEATER_PRINT_KEYWORDS = [
     "cam", "predvd", "hq predvd", "dvdscr", "tc", "hdcam", 
     "hq pre-hd", "clean audio", "(hq clean)", "hq clean",
@@ -33,7 +35,15 @@ class UniversalPreciseScraper(ctk.CTk):
         self.entry = ctk.CTkEntry(self, placeholder_text="Enter movie name (e.g., minnal murali malayalam)...", width=420, height=35)
         self.entry.pack(pady=10)
         
-        self.btn = ctk.CTkButton(self, text="Fetch & Send to qBittorrent", command=self.launch_thread, height=40, width=420, font=ctk.CTkFont(weight="bold"), anchor="center")
+        self.btn = ctk.CTkButton(
+            self, 
+            text="Fetch & Send to qBittorrent", 
+            command=self.launch_thread, 
+            height=40, 
+            width=420,  
+            font=ctk.CTkFont(weight="bold"),
+            anchor="center"  
+        )
         self.btn.pack(pady=10, padx=20)
         
         self.output = ctk.CTkTextbox(self, width=480, height=220, font=ctk.CTkFont(family="Courier", size=11))
@@ -60,9 +70,11 @@ class UniversalPreciseScraper(ctk.CTk):
             browser = p.chromium.launch(headless=True, executable_path=chrome_path)
             page = browser.new_page()
             
+            # Phase 1: Establish Gateway Connection
             base_url = None
             for dom in domains:
                 try:
+                    self.log(f"Testing route: {dom}")
                     res = page.goto(dom, wait_until="commit", timeout=6000)
                     if res and res.status < 400:
                         base_url = dom
@@ -79,6 +91,7 @@ class UniversalPreciseScraper(ctk.CTk):
             self.log(f"Connected to mirror: {base_url}")
             page.wait_for_load_state("networkidle")
             
+            # Phase 2A: Homepage Check
             self.log("Phase 2A: Scanning homepage index rows...")
             html_content = page.content()
             lines = re.split(r'<br\s*/?>', html_content, flags=re.IGNORECASE)
@@ -95,6 +108,7 @@ class UniversalPreciseScraper(ctk.CTk):
                         self.log("[FOUND] Located movie directly on the homepage feed.")
                         break
 
+            # Process immediately if found on homepage
             if homepage_href:
                 valid_links = self.extract_links_from_thread(page, homepage_href)
                 browser.close()
@@ -106,6 +120,7 @@ class UniversalPreciseScraper(ctk.CTk):
                 self.btn.configure(state="normal")
                 return
 
+            # Phase 2B: Database Search Fallback
             encoded_query = urllib.parse.quote_plus(search_title)
             search_endpoint = f"{base_url}/search/?q={encoded_query}"
             self.log(f"Not on homepage fold. Phase 2B: Querying database engine via: {search_endpoint}")
@@ -131,6 +146,8 @@ class UniversalPreciseScraper(ctk.CTk):
                         if href:
                             candidate_urls.append((href, normalized_text))
 
+                self.log(f"[INFO] Found {len(candidate_urls)} clean matching threads. Testing data rows...")
+                
                 for href, name in candidate_urls:
                     self.log(f"Testing candidate thread: {name[:45]}...")
                     valid_links = self.extract_links_from_thread(page, href)
@@ -142,16 +159,21 @@ class UniversalPreciseScraper(ctk.CTk):
                         self.optimize_and_download(valid_links)
                         self.btn.configure(state="normal")
                         return
+                    else:
+                        self.log("-> Thread empty or files exceed 5GB rule cap. Skipping...")
+
             except Exception as e:
                 self.log(f"[SEARCH ERROR] Query extraction execution failed: {str(e)}")
 
             browser.close()
-            self.log(f"[FINISHED] Spent all card candidates. No matching releases found.")
+            self.log(f"[FINISHED] Spent all card candidates. No matching releases found within requirements.")
             self.btn.configure(state="normal")
 
     def extract_links_from_thread(self, page, url):
         try:
             page.goto(url, wait_until="networkidle", timeout=10000)
+            
+            # Isolate the main thread header or topic text content to check regional language type
             thread_title_element = page.locator("h1.ipsType_pageTitle, title")
             full_context_text = ""
             if thread_title_element.count():
@@ -168,12 +190,15 @@ class UniversalPreciseScraper(ctk.CTk):
                     if any(banned in label for banned in THEATER_PRINT_KEYWORDS):
                         continue
                     if "1080p" in label:
+                        
+                        # --- STRIKT 5GB FILE SIZE RESTRICTION MATRIX ---
+                        # If title structure or file row string contains regional markers, enforce the rule
                         if "malayalam" in full_context_text or "tamil" in full_context_text or "malayalam" in label or "tamil" in label:
                             size_match = re.search(r'(\d+(?:\.\d+)?)\s*gb', label)
                             if size_match:
                                 size_gb = float(size_match.group(1))
                                 if size_gb > 5.0:
-                                    continue
+                                    continue  # Drops the file if it exceeds the 5GB cap
                                     
                         valid_links.append({"label": label, "url": href})
             return valid_links
@@ -204,14 +229,18 @@ class UniversalPreciseScraper(ctk.CTk):
                     break
 
         if not candidates:
-            self.log("[FINISHED] No links match your parameters.")
+            self.log("[FINISHED] No links match your combination of video sources and audio codecs.")
             return
+
+        self.log(f"[OPTIMIZER] Found target group variants: [{found_profile_log}]")
 
         try:
             qb = Client(host=QBIT_HOST, username=QBIT_USER, password=QBIT_PASS)
             qb.auth_log_in()
+            
             hashes_to_track = []
             
+            self.log(f"Injecting {len(candidates)} candidates paused to parse swarm seed counts...")
             for item in candidates:
                 url = item["url"]
                 if url.startswith("magnet:"):
@@ -219,12 +248,26 @@ class UniversalPreciseScraper(ctk.CTk):
                     info_hash = re.search(r'btih:([a-fA-F0-9]+)', url)
                     if info_hash:
                         hashes_to_track.append(info_hash.group(1).lower())
-                        
+                else:
+                    res = requests.get(url, timeout=12)
+                    if res.status_code == 200:
+                        qb.torrents_add(torrent_files=res.content, is_paused=True)
+            
+            self.log("Waiting 6 seconds for swarm tracker verification updates...")
             time.sleep(6)
+            
             all_torrents = qb.torrents_info()
-            candidate_torrents = [t for t in all_torrents if t.hash.lower() in hashes_to_track]
+            candidate_torrents = []
+            for t in all_torrents:
+                if hashes_to_track:
+                    if t.hash.lower() in hashes_to_track:
+                        candidate_torrents.append(t)
+                else:
+                    if any(w in t.name.lower() for w in AUDIO_PRIORITIES):
+                        candidate_torrents.append(t)
 
             if not candidate_torrents:
+                self.log("[ERROR] Could not isolate candidate injection identifiers inside client queue.")
                 return
 
             candidate_torrents.sort(key=lambda x: x.num_seeds, reverse=True)
@@ -236,10 +279,12 @@ class UniversalPreciseScraper(ctk.CTk):
             if len(candidate_torrents) > 1:
                 losers = [t.hash for t in candidate_torrents[1:]]
                 qb.torrents_delete(delete_files=True, torrent_hashes=losers)
+                self.log(f"Cleared out {len(losers)} slower duplicates from qBittorrent.")
                 
             self.log("[SUCCESS] Handoff pipeline complete!")
+            
         except Exception as err:
-            self.log(f"[INJECTION ERROR] Analytics failed: {err}")
+            self.log(f"[INJECTION ERROR] Swarm analytics loop failed: {err}")
 
 if __name__ == "__main__":
     UniversalPreciseScraper().mainloop()
