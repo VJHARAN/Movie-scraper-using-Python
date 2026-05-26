@@ -3,7 +3,7 @@ import re
 import customtkinter as ctk
 from playwright.sync_api import sync_playwright
 
-THEATER_PRINT_KEYWORDS = ["cam", "predvd", "dvdscr", "tc", "hdcam"]
+THEATER_PRINT_KEYWORDS = ["cam", "predvd", "hq predvd", "dvdscr", "tc", "hdcam", "trailer", "teaser", "promo", "official trailer"]
 
 class TorrentScraperV1(ctk.CTk):
     def __init__(self):
@@ -15,8 +15,8 @@ class TorrentScraperV1(ctk.CTk):
         self.entry = ctk.CTkEntry(self, placeholder_text="Enter movie name...", width=420, height=35)
         self.entry.pack(pady=10)
         
-        self.btn = ctk.CTkButton(self, text="Search Homepage", command=self.launch_thread, height=40)
-        self.btn.pack(pady=10)
+        self.btn = ctk.CTkButton(self, text="Fetch & Send to qBittorrent", command=self.launch_thread, height=40, width=420, anchor="center")
+        self.btn.pack(pady=10, padx=20)
         
         self.output = ctk.CTkTextbox(self, width=480, height=220)
         self.output.pack(pady=10)
