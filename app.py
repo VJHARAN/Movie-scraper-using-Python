@@ -53,6 +53,21 @@ class TorrentScraperV1(ctk.CTk):
                             if "/forums/topic/" in href:
                                 topic_href = href
                                 break
+                # Phase 2B Fallback Search Engine Routing
+                if not topic_href:
+                    encoded_query = urllib.parse.quote_plus(search_title)
+                    search_endpoint = f"{base_url}/search/?q={encoded_query}"
+                    page.goto(search_endpoint, wait_until="networkidle")
+                    
+                    search_cards = page.locator("a.sRow").all()
+                    for card in search_cards:
+                        title_span = card.locator(".sTitle")
+                        if title_span.count():
+                            text_content = (title_span.text_content() or "").lower()
+                            if all(word in text_content for word in search_words):
+                                topic_href = card.get_attribute("href")
+                                break
+                                
             except Exception as e:
                 self.log(f"Error: {e}")
             browser.close()
