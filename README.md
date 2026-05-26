@@ -22,35 +22,31 @@ The application bypasses unstable layout blocks, masks trailer/promotional noise
 ## 🚀 Installation & Running
 
 1. Install project dependencies:
-      ```bash
-      pip install customtkinter playwright qbittorrent-api requests
+   ```bash
+   pip install customtkinter playwright qbittorrent-api requests
+   ```
 2. Initialize Playwright binaries:
-      ```bash
-      playwright install chromium
+   ```bash
+   playwright install chromium
+   ```
 3. Run the application:
-      ```bash
-      python app.py
+   ```bash
+   python app.py
+   ```
 
-## 📦 Bundling as Standalone Executive File (.exe)
-   To lock structural layout values and bundle the application into a distribution executable while clearing compiler lock-hooks, execute:
-   rmdir /s /q build dist && pyinstaller --clean --noconsole --onefile app.py
+📦 Bundling as Standalone Executive File (.exe)
+To lock structural layout values and bundle the application into a distribution executable while clearing compiler lock-hooks, execute:
+```bash
+rmdir /s /q build dist && pyinstaller --clean --noconsole --onefile app.py
+```
 
-## 🔧 User Configurations  
-   Modify global parameters directly at the top of the script code layout to change stream filters:
-         ```Video formats scanned from top-left downward priority
-         VIDEO_PRIORITIES = ["true web-dl", "nf web-dl", "web-dl", "uhd", "bluray", "hd"]
-         AUDIO_PRIORITIES = ["atmos", "ddp5.1", "dd+5.1", "dd5.1", "aac"]
+🔧 User Configurations
+Modify global parameters directly at the top of the script code layout to change stream filters:
+```bash
+# Video formats scanned from top-left downward priority
+VIDEO_PRIORITIES = ["true web-dl", "nf web-dl", "web-dl", "uhd", "bluray", "hd"]
+AUDIO_PRIORITIES = ["atmos", "ddp5.1", "dd+5.1", "dd5.1", "aac"]
+```
 
-## ⚖️ License
-   This utility is developed solely for educational research and pipeline automation testing.
-   
-
-
-
-
-
-
-
-
-
-
+⚖️ License
+This utility is developed solely for educational research and pipeline automation testing.
