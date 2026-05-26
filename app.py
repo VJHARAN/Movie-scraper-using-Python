@@ -3,6 +3,8 @@ import re
 import customtkinter as ctk
 from playwright.sync_api import sync_playwright
 
+THEATER_PRINT_KEYWORDS = ["cam", "predvd", "dvdscr", "tc", "hdcam"]
+
 class TorrentScraperV1(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -32,7 +34,7 @@ class TorrentScraperV1(ctk.CTk):
     def worker(self, search_title):
         url = "https://www.1tamilmv.cards"
         search_words = [w.strip().lower() for w in search_title.lower().split() if len(w.strip()) > 1]
-        
+      
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True, executable_path="C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
             page = browser.new_page()
@@ -44,6 +46,8 @@ class TorrentScraperV1(ctk.CTk):
                 for line in lines:
                     clean_line = re.sub(r'<[^>]+>', ' ', line).lower()
                     if all(word in clean_line for word in search_words):
+                        if any(banned in clean_line for banned in THEATER_PRINT_KEYWORDS):
+                            continue
                         match = re.search(r'href=["\'](https?://[^"\']+/forums/topic/[^"\']+)["\']', line, flags=re.IGNORECASE)
                         if match:
                             self.log(f"[FOUND HOMEPAGE ROW] URL: {match.group(1)}")
