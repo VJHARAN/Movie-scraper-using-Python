@@ -40,18 +40,19 @@ class TorrentScraperV1(ctk.CTk):
             page = browser.new_page()
             try:
                 page.goto(url, timeout=8000)
-                html_content = page.content()
-                lines = re.split(r'<br\s*/?>', html_content, flags=re.IGNORECASE)
-                
-                for line in lines:
-                    clean_line = re.sub(r'<[^>]+>', ' ', line).lower()
-                    if all(word in clean_line for word in search_words):
-                        if any(banned in clean_line for banned in THEATER_PRINT_KEYWORDS):
+                # Target micro line-containers to completely prevent cross-movie matching slips
+                containers = page.locator("strong, p, li, tr").all()
+                for box in containers:
+                    text = (box.text_content() or "").lower()
+                    if all(word in text for word in search_words):
+                        if any(banned in text for banned in THEATER_PRINT_KEYWORDS):
                             continue
-                        match = re.search(r'href=["\'](https?://[^"\']+/forums/topic/[^"\']+)["\']', line, flags=re.IGNORECASE)
-                        if match:
-                            self.log(f"[FOUND HOMEPAGE ROW] URL: {match.group(1)}")
-                            break
+                        anchors = box.locator("a").all()
+                        for a in anchors:
+                            href = a.get_attribute("href") or ""
+                            if "/forums/topic/" in href:
+                                topic_href = href
+                                break
             except Exception as e:
                 self.log(f"Error: {e}")
             browser.close()
