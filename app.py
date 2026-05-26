@@ -4,6 +4,8 @@ import customtkinter as ctk
 from playwright.sync_api import sync_playwright
 
 THEATER_PRINT_KEYWORDS = ["cam", "predvd", "hq predvd", "dvdscr", "tc", "hdcam", "trailer", "teaser", "promo", "official trailer"]
+VIDEO_PRIORITIES = ["true web-dl", "nf web-dl", "web-dl", "uhd", "bluray", "hd", "webrip", "hdrip", "rips"]
+AUDIO_PRIORITIES = ["atmos", "ddp5.1", "dd+5.1", "dd5.1", "aac"]
 
 class TorrentScraperV1(ctk.CTk):
     def __init__(self):
@@ -67,6 +69,12 @@ class TorrentScraperV1(ctk.CTk):
                             if all(word in text_content for word in search_words):
                                 topic_href = card.get_attribute("href")
                                 break
+                    # Injected logic inside the dispatch layer:
+                    qb.torrents_add(urls=url, is_paused=True)
+                    time.sleep(6)
+                    candidate_torrents = qb.torrents_info()
+                    candidate_torrents.sort(key=lambda x: x.num_seeds, reverse=True)
+                    qb.torrents_resume(torrent_hashes=candidate_torrents[0].hash) # Wake up winner
                                 
             except Exception as e:
                 self.log(f"Error: {e}")
